@@ -9,7 +9,7 @@ public class Client {
 
     public static void main(String[] args) {
         // Вкажіть правильний шлях до файлу, який потрібно відправити
-        String filePath = "C:\\Users\\Админ\\Desktop\\Новий Текстовий документ.txt";
+        String filePath = "C:\\Users\\Админ\\Desktop\\socket.txt";
 
         try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
              DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -51,6 +51,14 @@ public class Client {
                 try (FileOutputStream fos = new FileOutputStream("received_" + fileName)) {
                     fos.write(receivedData);
                     System.out.println("Файл отримано та збережено як 'received_" + fileName + "'.");
+                }
+
+                // Отображение текста из файла на клиенте
+                try (BufferedReader reader = new BufferedReader(new FileReader("received_" + fileName))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.out.println(line);
+                    }
                 }
             }
         } catch (IOException e) {
