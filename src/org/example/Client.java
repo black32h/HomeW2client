@@ -7,11 +7,11 @@ import java.security.NoSuchAlgorithmException;
 
 public class Client {
     private static final String SERVER_HOST = "localhost";
-    private static final int SERVER_PORT = 5000;
+    private static final int SERVER_PORT = 50128;
 
-    public static void main(String[] args) {
+    public static void main ( String[] args ) {
         // Вкажіть шлях до файлу
-        String filePath = "C:\\Users\\Админ\\Desktop\\Новий Текстовий документ.txt";
+        String filePath = "C:\\Users\\Админ\\Desktop\\socket.txt";
 
         try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
              DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -38,15 +38,16 @@ public class Client {
             byte[] fileData = new byte[fileSize];
             try (FileInputStream fis = new FileInputStream(file)) {
                 fis.read(fileData);
+                System.out.println(fileData.length + " байт зчитано з файлу.");
             }
 
             // Розрахунок хешу файлу
-            String clientHash = calculateHash(fileData);
+            byte[] clientHash = calculateHashBytes(fileData);
+            System.out.println(calculateHash(fileData));
 
             // Відправлення метаданих і файлу
-            out.writeUTF(fileName);
-            out.writeInt(fileSize);
-            out.writeUTF(clientHash);
+
+
             out.write(fileData);
 
             // Отримання відповіді від сервера
@@ -83,7 +84,7 @@ public class Client {
     }
 
     // Метод для збереження статусу передачі
-    private static void saveTransferStatus(String fileName, int fileSize, String status) {
+    private static void saveTransferStatus ( String fileName, int fileSize, String status ) {
         String log = "Файл: " + fileName + ", Розмір: " + fileSize + " байт, Статус: " + status;
         System.out.println("Статус передачі: " + log);
 
@@ -95,7 +96,7 @@ public class Client {
     }
 
     // Метод для обчислення SHA-256 хешу
-    private static String calculateHash(byte[] data) throws NoSuchAlgorithmException {
+    private static String calculateHash ( byte[] data ) throws NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] hashBytes = digest.digest(data);
         StringBuilder hashString = new StringBuilder();
@@ -104,4 +105,12 @@ public class Client {
         }
         return hashString.toString();
     }
+
+    private static byte[] calculateHashBytes ( byte[] data ) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        return digest.digest(data);
+
+    }
 }
+
+
