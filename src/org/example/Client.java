@@ -2,14 +2,16 @@ package org.example;
 
 import java.io.*;
 import java.net.Socket;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class Client {
     private static final String SERVER_HOST = "localhost";
-    private static final int SERVER_PORT = 5000;
+    private static final int SERVER_PORT = 50128;
 
     public static void main(String[] args) {
         // Вкажіть шлях до файлу
-        String filePath = "C:\\Users\\Админ\\Desktop\\Новий Текстовий документ.txt";
+        String filePath = "C:\\Users\\Админ\\Desktop\\socket.txt";
 
         try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
              DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -38,30 +40,45 @@ public class Client {
                 fis.read(fileData);
             }
 
+            // Розрахунок хешу файлу
+            byte[] clientHash = calculateHashBytes(fileData);
+            System.out.println("Хеш файлу: " + calculateHash(fileData));
+
             // Відправлення метаданих і файлу
             out.writeUTF(fileName);
             out.writeInt(fileSize);
             out.write(fileData);
+            out.write(clientHash);
 
-            // Отримання відповіді від сервера.
+            // Отримання відповіді від сервера
             String serverResponse = in.readUTF();
             System.out.println("Відповідь сервера: " + serverResponse);
 
             if (serverResponse.contains("успішно")) {
+                String serverHash = in.readUTF();
                 int receivedSize = in.readInt();
                 byte[] receivedData = new byte[receivedSize];
                 in.readFully(receivedData);
 
-                // Збереження отриманого файлу
-                try (FileOutputStream fos = new FileOutputStream("received_" + fileName)) {
-                    fos.write(receivedData);
-                    System.out.println("Файл отримано та збережено як 'received_" + fileName + "'.");
+                // Перевірка хешу файлу, отриманого від сервера
+                String receivedHash = calculateHash(receivedData);
+                if (serverHash.equals(receivedHash)) {
+                    System.out.println("Цілісність файлу підтверджена.");
+
+                    // Збереження отриманого файлу
+                    try (FileOutputStream fos = new FileOutputStream("received_" + fileName)) {
+                        fos.write(receivedData);
+                        System.out.println("Файл отримано та збережено як 'received_" + fileName + "'.");
+                    }
+                    saveTransferStatus(fileName, fileSize, "Успішно скачано та збережено");
+                } else {
+                    System.out.println("Цілісність файлу порушена.");
+                    saveTransferStatus(fileName, fileSize, "Цілісність файлу порушена");
                 }
-                saveTransferStatus(fileName, fileSize, "Успішно скачано та збережено");
             } else {
                 saveTransferStatus(fileName, fileSize, "Файл не задовольняє умовам");
             }
-        } catch (IOException e) {
+        } catch (IOException | NoSuchAlgorithmException e) {
             System.err.println("Помилка клієнта: " + e.getMessage());
         }
     }
@@ -76,5 +93,21 @@ public class Client {
         } catch (IOException e) {
             System.err.println("Помилка запису статусу: " + e.getMessage());
         }
+    }
+
+    // Метод для обчислення SHA-256 хешу
+    private static String calculateHash(byte[] data) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hashBytes = digest.digest(data);
+        StringBuilder hashString = new StringBuilder();
+        for (byte b : hashBytes) {
+            hashString.append(String.format("%02x", b));
+        }
+        return hashString.toString();
+    }
+
+    private static byte[] calculateHashBytes(byte[] data) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        return digest.digest(data);
     }
 }
